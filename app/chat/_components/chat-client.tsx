@@ -14,6 +14,7 @@ import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import ConversationSection from "./conversation-section";
 import PromptSection from "./prompt-section";
 import KeyboardShortcutsDialog from "./keyboard-shortcuts-dialog";
+import { ActiveTurnProvider } from "./active-turn-context";
 import type { ConversationMode, Message } from "./types";
 import type { QA } from "@/lib/questions";
 
@@ -28,7 +29,20 @@ export default function ChatClient({ initialQuestions }: { initialQuestions: QA[
     const [isResponding, setIsResponding] = useState(false);
     const [panelInputValue, setPanelInputValue] = useState("");
     const [selectedSearchIndex, setSelectedSearchIndex] = useState(-1);
+    const [activeTurnId, setActiveTurnId] = useState<string | null>(null);
+    const [activeTurnMessage, setActiveTurnMessage] = useState<Message | null>(null);
     const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+    // Debug: Log active turn changes
+    useEffect(() => {
+        console.log("[ChatClient] Current active turn ID:", activeTurnId);
+        console.log("[ChatClient] Current active turn message:", activeTurnMessage);
+    }, [activeTurnId, activeTurnMessage]);
+
+    const handleActiveTurnChange = useCallback((id: string | null, message: Message | null) => {
+        setActiveTurnId(id);
+        setActiveTurnMessage(message);
+    }, []);
 
     // Debounce input for search
     const debouncedInputValue = useDebounce(panelInputValue, 300);
@@ -245,45 +259,49 @@ export default function ChatClient({ initialQuestions }: { initialQuestions: QA[
     }, [shouldShowSearchResults]);
 
     return (
-        <div className="relative min-h-screen overflow-hidden bg-slate-50 font-sans text-slate-900 dark:bg-slate-950 dark:text-slate-50">
-            <header className="z-10 border-b h-[60px] flex items-center justify-center border-slate-200/70 bg-white/80 backdrop-blur px-6 py-6 dark:border-slate-800/60 dark:bg-slate-950/70">
-                <div className="mx-auto flex w-full max-w-6xl items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <div>
-                            <p className="text-xs uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">
-                                Simple Chat
-                            </p>
+        <ActiveTurnProvider value={{ activeTurnId, activeTurnMessage, setActiveTurnId, setActiveTurnMessage }}>
+            <div className="relative min-h-screen overflow-hidden bg-slate-50 font-sans text-slate-900 dark:bg-slate-950 dark:text-slate-50">
+                {/* <header className="z-10 border-b h-[60px] flex items-center justify-center border-slate-200/70 bg-white/80 backdrop-blur px-6 py-6 dark:border-slate-800/60 dark:bg-slate-950/70">
+                    <div className="mx-auto flex w-full max-w-6xl items-center justify-between">
+                        <div className="flex min-w-0 items-center gap-3">
+                            <div className="min-w-0">
+                                <p className="text-sm font-medium text-slate-900 dark:text-slate-50 truncate max-w-[60vw]">
+                                    {activeTurnMessage?.content ?? "Simple Chat"}
+                                </p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <KeyboardShortcutsDialog />
                         </div>
                     </div>
-                    <KeyboardShortcutsDialog />
-                </div>
-            </header>
+                </header> */}
 
-            <main className="relative z-10 flex h-[calc(100vh-60px)] flex-col items-center justify-center">
-                <div className="flex h-full w-full items-center justify-center">
-                    <ConversationSection messages={messages} isResponding={isResponding} />
-                </div>
-                <PromptSection
-                    mode={mode}
-                    value={panelInputValue}
-                    isResponding={isResponding}
-                    onSubmit={handlePanelSubmit}
-                    onChange={handlePanelInputChange}
-                    onKeyDown={handlePanelKeyDown}
-                    onModeSelect={handleModeSelect}
-                    placement={messages.length > 0 ? "docked" : "floating"}
-                    searchResults={searchResults}
-                    onSearchResultClick={handleSearchResultClick}
-                    showSearchResults={shouldShowSearchResults}
-                    hasMessages={messages.length > 0}
-                    selectedSearchIndex={selectedSearchIndex}
-                    onSelectedSearchIndexChange={setSelectedSearchIndex}
-                    textareaRef={textareaRef}
-                    isSearching={isSearching}
-                    searchError={searchError}
-                />
-            </main>
-        </div>
+                <main className="relative z-10 flex h-[calc(100vh)] flex-col items-center justify-center overflow-x-hidden">
+                    <div className="flex h-full w-full items-center justify-center">
+                        <ConversationSection messages={messages} isResponding={isResponding} onActiveTurnChange={handleActiveTurnChange} />
+                    </div>
+                    <PromptSection
+                        mode={mode}
+                        value={panelInputValue}
+                        isResponding={isResponding}
+                        onSubmit={handlePanelSubmit}
+                        onChange={handlePanelInputChange}
+                        onKeyDown={handlePanelKeyDown}
+                        onModeSelect={handleModeSelect}
+                        placement={messages.length > 0 ? "docked" : "floating"}
+                        searchResults={searchResults}
+                        onSearchResultClick={handleSearchResultClick}
+                        showSearchResults={shouldShowSearchResults}
+                        hasMessages={messages.length > 0}
+                        selectedSearchIndex={selectedSearchIndex}
+                        onSelectedSearchIndexChange={setSelectedSearchIndex}
+                        textareaRef={textareaRef}
+                        isSearching={isSearching}
+                        searchError={searchError}
+                    />
+                </main>
+            </div>
+        </ActiveTurnProvider>
     );
 }
 
