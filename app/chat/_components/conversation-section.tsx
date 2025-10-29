@@ -7,10 +7,10 @@ import {
   ConversationScrollButton,
 } from "@/components/ai-elements/conversation";
 import { MessageAvatar } from "@/components/ai-elements/message";
-import { Response } from "@/components/ai-elements/response";
+import { ServerResponse } from "@/components/ai-elements/server-response";
 import { cn } from "@/lib/utils";
 import { MessageSquareIcon } from "lucide-react";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useState, type KeyboardEvent } from "react";
 
 import type { Message } from "./types";
 
@@ -77,6 +77,13 @@ const ConversationSection = ({ messages, isResponding = false }: ConversationSec
     });
   }, []);
 
+  const handleToggleKeyDown = useCallback((event: KeyboardEvent<HTMLButtonElement>, id: string) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      handleTogglePrompt(id);
+    }
+  }, [handleTogglePrompt]);
+
   return (
     <Conversation className="relative mx-auto flex h-full w-full flex-col">
       <ConversationContent className="flex h-full max-w-4xl mx-auto w-full flex-col">
@@ -116,8 +123,10 @@ const ConversationSection = ({ messages, isResponding = false }: ConversationSec
                         <button
                           type="button"
                           onClick={() => handleTogglePrompt(user.id)}
-                          className="mt-1 rounded-full border border-slate-200 px-3 py-1 text-xs font-medium text-slate-500 transition hover:border-slate-300 hover:text-slate-600 dark:border-slate-800 dark:text-slate-400 dark:hover:border-slate-700 dark:hover:text-slate-200"
+                          onKeyDown={(e) => handleToggleKeyDown(e, user.id)}
+                          className="mt-1 rounded-full border border-slate-200 px-3 py-1 text-xs font-medium text-slate-500 transition hover:border-slate-300 hover:text-slate-600 dark:border-slate-800 dark:text-slate-400 dark:hover:border-slate-700 dark:hover:text-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-400 dark:focus:ring-slate-600 focus:ring-offset-2"
                           aria-expanded={isExpanded}
+                          aria-label={isExpanded ? "Collapse question text" : "Expand question text"}
                         >
                           {isExpanded ? "Show less" : "Show more"}
                         </button>
@@ -129,10 +138,10 @@ const ConversationSection = ({ messages, isResponding = false }: ConversationSec
                     {assistants.map((assistant) => (
                       <div className="flex w-full justify-start" key={assistant.id}>
                         <div className="flex w-full max-w-4xl items-start gap-3">
-
-                          <Response className="prose prose-sm  dark:prose-invert">
-                            {assistant.content}
-                          </Response>
+                          <ServerResponse 
+                            content={assistant.content} 
+                            className="prose prose-sm dark:prose-invert"
+                          />
                         </div>
                       </div>
                     ))}

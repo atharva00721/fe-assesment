@@ -13,6 +13,14 @@ export const Response = memo(
         "size-full [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
         className
       )}
+      components={{
+        // Fix HTML nesting: use div instead of p for paragraphs that might contain images
+        p: ({ children, ...props }) => (
+          <div className="mb-4" {...props}>
+            {children}
+          </div>
+        ),
+      }}
       {...props}
     />
   ),
