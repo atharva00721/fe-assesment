@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "motion/react";
 import { useEffect, useRef } from "react";
 import { Shimmer } from "@/components/ai-elements/shimmer";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type SearchResult = {
   question: string;
@@ -156,9 +157,7 @@ const SearchResults = ({
                 <div className="space-y-2">
                   {[...Array(3)].map((_, idx) => (
                     <div key={idx} className="flex items-center gap-2">
-                      <Shimmer className="text-sm" duration={1.5 + idx * 0.2}>
-                        Searching for results...
-                      </Shimmer>
+                      <Skeleton className="h-4 w-48" />
                     </div>
                   ))}
                 </div>

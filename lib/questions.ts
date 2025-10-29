@@ -346,4 +346,37 @@ For detailed stats and information, visit [PokéAPI](${pokemon.url}).
   return [];
 }
 
+// Lightweight titles for fast search (1 HTTP call + in-process cache)
+let titleCache:
+  | { at: number; data: Array<{ question: string }> }
+  | null = null;
+
+export async function fetchServerQuestionTitles(limit = 1300): Promise<Array<{ question: string }>> {
+  const TTL = 3600_000; // 1 hour
+  if (titleCache && Date.now() - titleCache.at < TTL) {
+    return titleCache.data;
+  }
+
+  const res = await fetch(
+    `https://pokeapi.co/api/v2/pokemon?limit=${limit}`,
+    {
+      cache: "force-cache",
+      next: { revalidate: 3600 }, // Cache for 1 hour
+    }
+  );
+
+  if (!res.ok) return [];
+
+  const data = await res.json();
+
+  const results = Array.isArray(data?.results)
+    ? data.results.map((p: PokemonListItem) => ({
+      question: `Who is ${capitalizeWords(p.name)}?`,
+    }))
+    : [];
+
+  titleCache = { at: Date.now(), data: results };
+  return results;
+}
+
 

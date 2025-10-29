@@ -1,5 +1,8 @@
-import { fetchServerQuestions } from "@/lib/questions";
+import { fetchServerQuestionTitles } from "@/lib/questions";
 import { NextResponse } from "next/server";
+
+// Enable Edge runtime for faster cold starts
+export const runtime = "edge";
 
 // Simple fuzzy search function (same logic as client)
 function searchQuestions(query: string, questions: Array<{ question: string }>): Array<{ question: string }> {
@@ -53,8 +56,8 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const query = searchParams.get("q") || "";
 
-    // Fetch questions from server (uses Next.js cache)
-    const questions = await fetchServerQuestions(1300);
+    // Use lightweight titles for fast search (single HTTP call + cached)
+    const questions = await fetchServerQuestionTitles(1300);
 
     // Perform search
     const results = searchQuestions(query, questions);
