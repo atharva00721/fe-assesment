@@ -10,7 +10,7 @@ import { MessageAvatar } from "@/components/ai-elements/message";
 import { ServerResponse } from "@/components/ai-elements/server-response";
 import { MessageSquareIcon } from "lucide-react";
 import { useMemo, useState, useRef, useEffect } from "react";
-
+import { Kbd, KbdGroup } from "@/components/ui/kbd"
 import type { Message } from "./types";
 import CommentsPanel from "./comments-panel";
 
@@ -126,6 +126,8 @@ const ConversationSection = ({ messages, isResponding = false, onActiveTurnChang
     onActiveTurnChange?.(activeTurnId ?? null, activeTurnMessage);
   }, [activeTurnId, activeTurn, onActiveTurnChange]);
 
+
+
   return (
     <Conversation className="relative mx-auto flex h-full w-full flex-col">
       {/* Global floating header */}
@@ -149,11 +151,30 @@ const ConversationSection = ({ messages, isResponding = false, onActiveTurnChang
 
       <ConversationContent className="flex h-full max-w-4xl mx-auto w-full flex-col">
         {!hasTurns && !isResponding ? (
-          <ConversationEmptyState
-            description="Messages will appear here as the conversation progresses."
-            icon={<MessageSquareIcon className="size-6" />}
-            title="Start a conversation"
-          />
+          <ConversationEmptyState className="justify-start">
+            <div className="relative mx-auto w-full max-w-3xl px-4 pt-24 text-center sm:pt-32 md:pt-40">
+              <div className="pointer-events-none absolute inset-x-10 -top-10 h-32 bg-linear-to-r from-fuchsia-400/20 via-rose-400/20 to-amber-300/20 blur-2xl dark:from-fuchsia-500/10 dark:via-rose-500/10 dark:to-amber-400/10" />
+              <div className="relative">
+                <div className="mx-auto mb-3 flex size-10 items-center justify-center rounded-full border border-slate-200/70 bg-white/80 shadow-sm backdrop-blur dark:border-slate-800/60 dark:bg-slate-900/70">
+                  <MessageSquareIcon className="size-5 text-slate-600 dark:text-slate-300" />
+                </div>
+                <h1 className="bg-linear-to-r from-slate-900 via-slate-800 to-slate-900 bg-clip-text text-3xl font-bold tracking-tight text-transparent dark:from-white dark:via-slate-200 dark:to-white sm:text-4xl">
+                  PokéDex AI
+                </h1>
+                <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
+                  Ask about any Pokémon — stats, evolutions, types, moves and more.
+                </p>
+                <p className="mt-3 text-xs text-muted-foreground">Press
+                  {" "}<span>
+                    <KbdGroup>
+                      <Kbd className="bg-accent text-accent-foreground">Ctrl</Kbd>
+                      <span>+</span>
+                      <Kbd>/</Kbd>
+                    </KbdGroup>
+                  </span>{" "} for shortcuts</p>
+              </div>
+            </div>
+          </ConversationEmptyState>
         ) : (
           <div className="flex flex-col pb-46">
             {turns.map(({ user, assistants }) => {

@@ -15,7 +15,7 @@ import ConversationSection from "./conversation-section";
 import PromptSection from "./prompt-section";
 import KeyboardShortcutsDialog from "./keyboard-shortcuts-dialog";
 import { ActiveTurnProvider } from "./active-turn-context";
-import type { ConversationMode, Message } from "./types";
+import type { Message } from "./types";
 import type { QA } from "@/lib/questions";
 
 const createId = () =>
@@ -25,7 +25,6 @@ const createId = () =>
 
 export default function ChatClient({ initialQuestions }: { initialQuestions: QA[] }) {
     const [messages, setMessages] = useState<Message[]>([]);
-    const [mode, setMode] = useState<ConversationMode>("Auto");
     const [isResponding, setIsResponding] = useState(false);
     const [panelInputValue, setPanelInputValue] = useState("");
     const [selectedSearchIndex, setSelectedSearchIndex] = useState(-1);
@@ -71,6 +70,11 @@ export default function ChatClient({ initialQuestions }: { initialQuestions: QA[
             }
         }
         return byName;
+    }, [initialQuestions]);
+
+    // Suggestions to show on the empty state
+    const suggestions = useMemo(() => {
+        return initialQuestions.slice(0, 8).map((q) => q.question);
     }, [initialQuestions]);
 
     // TanStack Query for server-side search with caching
@@ -130,7 +134,7 @@ export default function ChatClient({ initialQuestions }: { initialQuestions: QA[
 
         const assistantContent = matched?.answer
             ?? byNameAnswer
-            ?? `# ${mode} reply\n\n${trimmed}\n\n---\n\n- Mode: **${mode}**\n- Length: **${trimmed.length}** characters`;
+            ?? `# Response\n\n${trimmed}\n\n---\n\n- Length: **${trimmed.length}** characters`;
 
         setMessages((prev) => [...prev, userMessage]);
         setIsResponding(true);
@@ -142,7 +146,7 @@ export default function ChatClient({ initialQuestions }: { initialQuestions: QA[
             ]);
             setIsResponding(false);
         }, 300);
-    }, [mode, qaIndex, nameIndex]);
+    }, [qaIndex, nameIndex]);
 
     const handlePanelSubmit = useCallback((event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -228,10 +232,6 @@ export default function ChatClient({ initialQuestions }: { initialQuestions: QA[
         }
     }, []);
 
-    const handleModeSelect = useCallback((nextMode: ConversationMode) => {
-        setMode(nextMode);
-    }, []);
-
     // Global keyboard shortcuts
     useEffect(() => {
         const handleGlobalKeyDown = (event: globalThis.KeyboardEvent) => {
@@ -276,18 +276,21 @@ export default function ChatClient({ initialQuestions }: { initialQuestions: QA[
                     </div>
                 </header> */}
 
+                <KeyboardShortcutsDialog />
                 <main className="relative z-10 flex h-[calc(100vh)] flex-col items-center justify-center overflow-x-hidden">
                     <div className="flex h-full w-full items-center justify-center">
-                        <ConversationSection messages={messages} isResponding={isResponding} onActiveTurnChange={handleActiveTurnChange} />
+                        <ConversationSection
+                            messages={messages}
+                            isResponding={isResponding}
+                            onActiveTurnChange={handleActiveTurnChange}
+                        />
                     </div>
                     <PromptSection
-                        mode={mode}
                         value={panelInputValue}
                         isResponding={isResponding}
                         onSubmit={handlePanelSubmit}
                         onChange={handlePanelInputChange}
                         onKeyDown={handlePanelKeyDown}
-                        onModeSelect={handleModeSelect}
                         placement={messages.length > 0 ? "docked" : "floating"}
                         searchResults={searchResults}
                         onSearchResultClick={handleSearchResultClick}
@@ -298,6 +301,8 @@ export default function ChatClient({ initialQuestions }: { initialQuestions: QA[
                         textareaRef={textareaRef}
                         isSearching={isSearching}
                         searchError={searchError}
+                        suggestions={suggestions}
+                        onSuggestionClick={handleSearchResultClick}
                     />
                 </main>
             </div>

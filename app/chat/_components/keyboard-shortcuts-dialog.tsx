@@ -7,11 +7,8 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Kbd, KbdGroup } from "@/components/ui/kbd";
-import { KeyboardIcon } from "lucide-react";
-import { Button } from "@/components/ui/button";
 
 export default function KeyboardShortcutsDialog() {
   const [showShortcutsDialog, setShowShortcutsDialog] = useState(false);
@@ -22,32 +19,23 @@ export default function KeyboardShortcutsDialog() {
   // Global keyboard shortcut to open dialog
   useEffect(() => {
     const handleGlobalKeyDown = (event: globalThis.KeyboardEvent) => {
-      // Ctrl/Cmd + / to show keyboard shortcuts
+      // Ctrl/Cmd + / to show keyboard shortcuts (works everywhere, even in inputs)
       if ((event.ctrlKey || event.metaKey) && event.key === "/") {
         event.preventDefault();
-        setShowShortcutsDialog(true);
+        event.stopPropagation();
+        setShowShortcutsDialog((prev) => !prev);
         return;
       }
     };
 
-    window.addEventListener("keydown", handleGlobalKeyDown);
+    window.addEventListener("keydown", handleGlobalKeyDown, true); // Use capture phase to catch before input handlers
     return () => {
-      window.removeEventListener("keydown", handleGlobalKeyDown);
+      window.removeEventListener("keydown", handleGlobalKeyDown, true);
     };
   }, []);
 
   return (
     <Dialog open={showShortcutsDialog} onOpenChange={setShowShortcutsDialog}>
-      <DialogTrigger asChild>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8"
-          aria-label="Show keyboard shortcuts"
-        >
-          <KeyboardIcon />
-        </Button>
-      </DialogTrigger>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>Keyboard Shortcuts</DialogTitle>
