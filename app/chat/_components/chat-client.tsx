@@ -40,6 +40,25 @@ export default function ChatClient({ initialQuestions }: { initialQuestions: QA[
         return byText;
     }, [initialQuestions]);
 
+    // Map Pokémon names to QA for freeform name queries
+    const nameIndex = useMemo(() => {
+        const byName = new Map<string, QA>();
+        for (const qa of initialQuestions) {
+            // Prefer extracting name from the answer's first heading
+            const headerMatch = qa.answer.match(/^#\s+([^\n]+)/);
+            let name = headerMatch?.[1]?.trim();
+            if (!name) {
+                const qMatch = qa.question.match(/^(?:How|What|Who) is\s+(.+?)\?$/i);
+                if (qMatch) name = qMatch[1]?.trim();
+            }
+            if (name) {
+                const key = name.toLowerCase();
+                if (!byName.has(key)) byName.set(key, qa);
+            }
+        }
+        return byName;
+    }, [initialQuestions]);
+
     // TanStack Query for server-side search with caching
     const {
         data: searchResults = [],
@@ -75,9 +94,29 @@ export default function ChatClient({ initialQuestions }: { initialQuestions: QA[
 
         // Look up a predefined answer if exact match; fallback to a generic response
         const matched = qaIndex.get(trimmed.toLowerCase());
-        const assistantContent = matched
-            ? matched.answer
-            : `# ${mode} reply\n\n${trimmed}\n\n---\n\n- Mode: **${mode}**\n- Length: **${trimmed.length}** characters`;
+        // Try to resolve Pokémon by name (freeform queries like "pikachu" or "show me charizard")
+        let byNameAnswer: string | undefined;
+        if (!matched) {
+            const lower = trimmed.toLowerCase();
+            const exact = nameIndex.get(lower);
+            if (exact) {
+                byNameAnswer = exact.answer;
+            } else {
+                // Partial match: find first name present as a word
+                for (const [name, qa] of nameIndex) {
+                    const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+                    const re = new RegExp(`(^|\\b|\\s)${escaped}(\\b|\\s|$)`, "i");
+                    if (re.test(lower)) {
+                        byNameAnswer = qa.answer;
+                        break;
+                    }
+                }
+            }
+        }
+
+        const assistantContent = matched?.answer
+            ?? byNameAnswer
+            ?? `# ${mode} reply\n\n${trimmed}\n\n---\n\n- Mode: **${mode}**\n- Length: **${trimmed.length}** characters`;
 
         setMessages((prev) => [...prev, userMessage]);
         setIsResponding(true);
@@ -89,7 +128,7 @@ export default function ChatClient({ initialQuestions }: { initialQuestions: QA[
             ]);
             setIsResponding(false);
         }, 300);
-    }, [mode, qaIndex]);
+    }, [mode, qaIndex, nameIndex]);
 
     const handlePanelSubmit = useCallback((event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();

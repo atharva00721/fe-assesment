@@ -124,8 +124,8 @@ export function ServerResponse({ content, className }: ServerResponseProps) {
   return (
     <div className={cn(markdownClassName, className)}>
       <ReactMarkdown
-        remarkPlugins={markdownPlugins.remark}
-        rehypePlugins={markdownPlugins.rehype}
+        remarkPlugins={[...markdownPlugins.remark]}
+        rehypePlugins={[...markdownPlugins.rehype]}
         components={components}
       >
         {content}

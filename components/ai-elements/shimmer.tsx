@@ -4,19 +4,40 @@ import { cn } from "@/lib/utils";
 import { motion } from "motion/react";
 import {
   type CSSProperties,
-  type ElementType,
-  type JSX,
   memo,
   useMemo,
 } from "react";
 
 export type TextShimmerProps = {
   children: string;
-  as?: ElementType;
+  as?: "p" | "span" | "div" | "h1" | "h2" | "h3" | "h4" | "h5" | "h6";
   className?: string;
   duration?: number;
   spread?: number;
 };
+
+// Create motion components at module level to satisfy linter
+const MotionP = motion.create("p");
+const MotionSpan = motion.create("span");
+const MotionDiv = motion.create("div");
+const MotionH1 = motion.create("h1");
+const MotionH2 = motion.create("h2");
+const MotionH3 = motion.create("h3");
+const MotionH4 = motion.create("h4");
+const MotionH5 = motion.create("h5");
+const MotionH6 = motion.create("h6");
+
+const componentMap = {
+  p: MotionP,
+  span: MotionSpan,
+  div: MotionDiv,
+  h1: MotionH1,
+  h2: MotionH2,
+  h3: MotionH3,
+  h4: MotionH4,
+  h5: MotionH5,
+  h6: MotionH6,
+} as const;
 
 const ShimmerComponent = ({
   children,
@@ -25,10 +46,7 @@ const ShimmerComponent = ({
   duration = 2,
   spread = 2,
 }: TextShimmerProps) => {
-  const MotionComponent = useMemo(
-    () => motion.create(Component as keyof JSX.IntrinsicElements),
-    [Component]
-  );
+  const MotionComponent = componentMap[Component];
 
   const dynamicSpread = useMemo(
     () => (children?.length ?? 0) * spread,
