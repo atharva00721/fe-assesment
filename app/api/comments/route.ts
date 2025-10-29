@@ -1,20 +1,22 @@
 import { NextResponse } from "next/server";
 
-// Stub API endpoint - returns empty list for now
-// In the future, this will fetch comments from localStorage or server based on the key
-export async function GET(request: Request) {
-    try {
-        const { searchParams } = new URL(request.url);
-        const key = searchParams.get("key") || "";
+export async function GET() {
+    return NextResponse.json(
+        {
+            message:
+                "Comments are persisted in browser localStorage on the client. No server storage implemented yet.",
+        },
+        { status: 501 }
+    );
+}
 
-        // TODO: Fetch comments from localStorage or server based on key
-        return NextResponse.json([]);
-    } catch (error) {
-        console.error("Comments API error:", error);
-        return NextResponse.json(
-            { error: "Failed to fetch comments", results: [] },
-            { status: 500 }
-        );
-    }
+export async function POST() {
+    return NextResponse.json(
+        {
+            message:
+                "Comments are client-side only for this assignment. Stub API.",
+        },
+        { status: 501 }
+    );
 }
 

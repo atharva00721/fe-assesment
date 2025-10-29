@@ -107,7 +107,7 @@ const PromptSection = ({
                         <InputGroupButton
                             variant="default"
                             className="rounded-full"
-                            size="icon-xs"
+                            size="icon-sm"
                             type="submit"
                             disabled={!value.trim() || isResponding}
                         >
