@@ -68,46 +68,35 @@ const Hero = () => {
         <div className="relative size-full shadow-xl rounded-2xl overflow-hidden">
           <div className="relative block dark:hidden">
             <div className="group relative cursor-pointer">
-              <img
-                src="/"
-                alt=" "
-                width={1920}
-                height={1080}
-                className="w-full transition-all duration-200 ease-out group-hover:brightness-[0.8] isolate "
-                style={{
-                  background:
-                    "linear-gradient(120deg, rgba(236,72,153,0.12) 0%, rgba(255,255,255,0.15) 100%)",
-                }}
+              <video
+                className="w-full transition-all duration-200 ease-out isolate"
+                src="https://g04vidadm3.ufs.sh/f/WIG3ufijdLFM3dAsGix6bNmPCSRU8Bh9D1TFYplEwkqXyZ4j"
+                autoPlay
+                muted
+                loop
+                playsInline
+                preload="auto"
+                controlsList="nodownload nofullscreen noremoteplayback noplaybackrate"
+                disablePictureInPicture
+                crossOrigin="anonymous"
               />
-              <div className="absolute isolate inset-0 flex scale-[0.9] items-center justify-center rounded-2xl transition-all duration-200 ease-out group-hover:scale-100">
-                {/* Updated play button accent gradient */}
-                <div className="flex size-28 items-center justify-center rounded-full bg-[from-[#6c6cff]/20 to-[#ACC3F7]/15] backdrop-blur-md">
-                  <div className="relative flex size-20 scale-100 items-center justify-center rounded-full bg-[linear-gradient(to_right, #6c6cff, #ACC3F7)] shadow-md transition-all duration-200 ease-out group-hover:scale-[1.2]">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="24"
-                      height="24"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="lucide lucide-play size-8 scale-100 fill-white text-foreground transition-transform duration-200 ease-out group-hover:scale-105"
-                      style={{
-                        filter:
-                          "drop-shadow(0 4px 3px rgb(0 0 0 / 0.07)) drop-shadow(0 2px 2px rgb(0 0 0 / 0.06))",
-                      }}
-                    >
-                      <polygon points="6 3 20 12 6 21 6 3"></polygon>
-                    </svg>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
           <div className="relative hidden dark:block">
-            <div className="group relative cursor-pointer"></div>
+            <div className="group relative cursor-pointer">
+              <video
+                className="w-full transition-all duration-200 ease-out isolate"
+                src="https://g04vidadm3.ufs.sh/f/WIG3ufijdLFM3dAsGix6bNmPCSRU8Bh9D1TFYplEwkqXyZ4j"
+                autoPlay
+                muted
+                loop
+                playsInline
+                preload="auto"
+                controlsList="nodownload nofullscreen noremoteplayback noplaybackrate"
+                disablePictureInPicture
+                crossOrigin="anonymous"
+              />
+            </div>
           </div>
         </div>
       </div>
