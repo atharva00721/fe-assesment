@@ -13,15 +13,16 @@ import { useDebounce } from "react-haiku";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import ConversationSection from "./conversation-section";
 import PromptSection from "./prompt-section";
-import KeyboardShortcutsDialog from "./keyboard-shortcuts-dialog";
+import dynamic from "next/dynamic";
 import { ActiveTurnProvider } from "./active-turn-context";
 import type { Message } from "./types";
-import type { QA } from "@/lib/questions";
+import type { QA } from "@/lib/questions/schema";
+import { createId, buildNameIndex } from "./utils";
+import { useGlobalShortcuts, useQAIndex, useSuggestions } from "./hooks";
 
-const createId = () =>
-    typeof crypto !== "undefined" && "randomUUID" in crypto
-        ? crypto.randomUUID()
-        : Math.random().toString(36).slice(2);
+const KeyboardShortcutsDialog = dynamic(() => import("./keyboard-shortcuts-dialog"), {
+    loading: () => null,
+});
 
 export default function ChatClient({ initialQuestions }: { initialQuestions: QA[] }) {
     const [messages, setMessages] = useState<Message[]>([]);
@@ -47,35 +48,13 @@ export default function ChatClient({ initialQuestions }: { initialQuestions: QA[
     const debouncedInputValue = useDebounce(panelInputValue, 300);
 
     // Index questions by a quick lookup or simple search
-    const qaIndex = useMemo(() => {
-        const byText = new Map<string, QA>();
-        for (const qa of initialQuestions) byText.set(qa.question.toLowerCase(), qa);
-        return byText;
-    }, [initialQuestions]);
+    const qaIndex = useQAIndex(initialQuestions);
 
     // Map Pokémon names to QA for freeform name queries
-    const nameIndex = useMemo(() => {
-        const byName = new Map<string, QA>();
-        for (const qa of initialQuestions) {
-            // Prefer extracting name from the answer's first heading
-            const headerMatch = qa.answer.match(/^#\s+([^\n]+)/);
-            let name = headerMatch?.[1]?.trim();
-            if (!name) {
-                const qMatch = qa.question.match(/^(?:How|What|Who) is\s+(.+?)\?$/i);
-                if (qMatch) name = qMatch[1]?.trim();
-            }
-            if (name) {
-                const key = name.toLowerCase();
-                if (!byName.has(key)) byName.set(key, qa);
-            }
-        }
-        return byName;
-    }, [initialQuestions]);
+    const nameIndex = useMemo(() => buildNameIndex(initialQuestions), [initialQuestions]);
 
     // Suggestions to show on the empty state
-    const suggestions = useMemo(() => {
-        return initialQuestions.slice(0, 8).map((q) => q.question);
-    }, [initialQuestions]);
+    const suggestions = useSuggestions(initialQuestions);
 
     // TanStack Query for server-side search with caching
     const {
@@ -232,31 +211,7 @@ export default function ChatClient({ initialQuestions }: { initialQuestions: QA[
         }
     }, []);
 
-    // Global keyboard shortcuts
-    useEffect(() => {
-        const handleGlobalKeyDown = (event: globalThis.KeyboardEvent) => {
-            // Ctrl/Cmd + K to focus input
-            if ((event.ctrlKey || event.metaKey) && event.key === "k") {
-                event.preventDefault();
-                textareaRef.current?.focus();
-                return;
-            }
-
-            // Escape to clear input when focused and no search results
-            if (event.key === "Escape") {
-                const activeElement = document.activeElement;
-                if (activeElement === textareaRef.current && !shouldShowSearchResults && textareaRef.current) {
-                    setPanelInputValue("");
-                    textareaRef.current.blur();
-                }
-            }
-        };
-
-        window.addEventListener("keydown", handleGlobalKeyDown);
-        return () => {
-            window.removeEventListener("keydown", handleGlobalKeyDown);
-        };
-    }, [shouldShowSearchResults]);
+    useGlobalShortcuts(shouldShowSearchResults, textareaRef, setPanelInputValue);
 
     return (
         <ActiveTurnProvider value={{ activeTurnId, activeTurnMessage, setActiveTurnId, setActiveTurnMessage }}>

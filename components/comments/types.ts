@@ -12,3 +12,5 @@ export type UserVote = "up" | "down";
 
 export type CommentList = Comment[];
 
+export const MAX_CONTENT_LENGTH = 500;
+

@@ -12,6 +12,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { ArrowUpIcon, ImageIcon, X } from "lucide-react";
 import type { Comment } from "./types";
+import { MAX_CONTENT_LENGTH } from "./types";
 
 type CommentInputProps = {
   messageId: string;
@@ -35,6 +36,18 @@ export function CommentInput({
   const [error, setError] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const prevInitialCommentRef = useRef(initialComment);
+  const MAX_TEXTAREA_HEIGHT_PX = 160;
+  const MIN_TEXTAREA_HEIGHT_PX = 40;
+
+  const resizeTextarea = () => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    textarea.style.height = "auto";
+    const nextHeight = Math.min(MAX_TEXTAREA_HEIGHT_PX, textarea.scrollHeight);
+    const finalHeight = Math.max(MIN_TEXTAREA_HEIGHT_PX, nextHeight);
+    textarea.style.height = `${finalHeight}px`;
+    textarea.style.overflowY = textarea.scrollHeight > MAX_TEXTAREA_HEIGHT_PX ? "auto" : "hidden";
+  };
 
   // Sync state when initialComment changes (for edit mode)
   useEffect(() => {
@@ -43,6 +56,8 @@ export function CommentInput({
       // Use requestAnimationFrame to defer state update outside of effect
       requestAnimationFrame(() => {
         setContent(initialComment.content);
+        // Ensure height syncs after content update on edit mode
+        requestAnimationFrame(resizeTextarea);
       });
     }
     prevInitialCommentRef.current = initialComment;
@@ -59,6 +74,11 @@ export function CommentInput({
     }
   }, [initialComment]);
 
+  // Resize when content changes or on mount
+  useEffect(() => {
+    resizeTextarea();
+  }, [content]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -67,6 +87,10 @@ export function CommentInput({
     const trimmedContent = content.trim();
     if (!trimmedContent) {
       setError("Comment cannot be empty");
+      return;
+    }
+    if (trimmedContent.length > MAX_CONTENT_LENGTH) {
+      setError(`Comment is too long (max ${MAX_CONTENT_LENGTH} characters)`);
       return;
     }
 
@@ -115,23 +139,18 @@ export function CommentInput({
           placeholder={isEditMode ? "Edit your comment..." : "What are your thoughts?"}
           value={content}
           onChange={(e) => setContent(e.target.value)}
+          onInput={resizeTextarea}
           onKeyDown={handleKeyDown}
           disabled={isLoading}
-          className="min-h-[60px] resize-none bg-transparent text-base leading-6 focus-visible:ring-0 dark:bg-transparent"
+          rows={1}
+          className="min-h-[40px] max-h-[160px] resize-none bg-transparent text-base leading-6 focus-visible:ring-0 dark:bg-transparent overflow-y-auto"
           aria-label={isEditMode ? "Edit comment" : "Write a comment"}
         />
         <InputGroupAddon align="block-end" className="gap-2">
-          <InputGroupButton
-            variant="ghost"
-            size="icon-sm"
-            type="button"
-            className="hover:bg-slate-100 dark:hover:bg-slate-800"
-            aria-label="Upload media"
-            title="Upload media (coming soon)"
-          >
-            <ImageIcon className="size-3.5" />
-            <span className="sr-only">Upload media</span>
-          </InputGroupButton>
+          <InputGroupText className="text-[10px] text-slate-500 dark:text-slate-400">
+            {content.length}/{MAX_CONTENT_LENGTH}
+          </InputGroupText>
+
           <div className="ml-auto flex items-center gap-2">
             {isEditMode && onCancel && (
               <>
@@ -154,7 +173,7 @@ export function CommentInput({
               className="rounded-full"
               size="icon-sm"
               type="submit"
-              disabled={!content.trim() || isLoading}
+              disabled={!content.trim() || content.trim().length > MAX_CONTENT_LENGTH || isLoading}
               aria-label={isEditMode ? "Save changes" : "Post comment"}
             >
               <ArrowUpIcon className="size-3.5" />

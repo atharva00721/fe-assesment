@@ -1,7 +1,10 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMemo, useState, useEffect } from "react";
+import { toast } from "sonner";
 import { CommentItem } from "./comment-item";
+import { CommentThread, type CommentNode } from "./comment-thread";
 import {
   getCommentsForMessage,
   saveCommentsForMessage,
@@ -9,6 +12,16 @@ import {
   saveUserVotes,
 } from "./comment-storage";
 import type { Comment, UserVote } from "./types";
+import { SortControls, type SortValue } from "./sort-controls";
+import {
+  nextVote as computeNextVote,
+  applyVote as applyVoteToList,
+  sortComments,
+  buildCommentTree,
+} from "./utils";
+import { CommentsSkeleton } from "./skeleton-list";
+import { EmptyComments } from "./empty-state";
+import { usePersistedSort } from "./hooks";
 
 type CommentListProps = {
   messageId: string;
@@ -17,44 +30,26 @@ type CommentListProps = {
 export function CommentList({ messageId }: CommentListProps) {
   const queryClient = useQueryClient();
 
+  // Sort state (persist per message)
+  const [sort, setSort] = usePersistedSort(messageId);
+
   // Fetch comments
-  const { data: comments = [] } = useQuery<Comment[]>({
+  const { data: comments = [], isFetching: isFetchingComments } = useQuery<Comment[]>({
     queryKey: ["comments", messageId],
     queryFn: () => getCommentsForMessage(messageId),
     staleTime: 0, // Always read fresh from localStorage
   });
 
   // Fetch user votes for this message (stable key)
-  const { data: userVotes = {} } = useQuery<Record<string, UserVote>>({
+  const userVotesQuery = useQuery<Record<string, UserVote>>({
     queryKey: ["userVotes", messageId],
     queryFn: () => getUserVotes(messageId),
     staleTime: 0,
   });
+  const userVotes = userVotesQuery.data || ({} as Record<string, UserVote>);
+  const isFetchingVotes = userVotesQuery.isFetching;
 
-  function nextVote(current: UserVote | null, target: UserVote): UserVote | null {
-    if (current === target) return null; // toggle off
-    return target; // switch or set
-  }
-
-  function applyVote(
-    list: Comment[],
-    commentId: string,
-    from: UserVote | null,
-    to: UserVote | null
-  ): Comment[] {
-    return list.map((c) => {
-      if (c.id !== commentId) return c;
-      let up = c.upvotes;
-      let down = c.downvotes;
-      // remove previous
-      if (from === "up") up -= 1;
-      if (from === "down") down -= 1;
-      // add new
-      if (to === "up") up += 1;
-      if (to === "down") down += 1;
-      return { ...c, upvotes: Math.max(0, up), downvotes: Math.max(0, down) };
-    });
-  }
+  // moved to utils.ts: nextVote, applyVote
 
   // Vote mutation
   const voteMutation = useMutation({
@@ -68,9 +63,10 @@ export function CommentList({ messageId }: CommentListProps) {
         updatedVotes[commentId] = vote;
       }
       const currentComments = getCommentsForMessage(messageId);
-      const updatedComments = applyVote(currentComments, commentId, currentVote, vote);
-      saveCommentsForMessage(messageId, updatedComments);
-      saveUserVotes(messageId, updatedVotes);
+      const updatedComments = applyVoteToList(currentComments, commentId, currentVote, vote);
+      const ok1 = saveCommentsForMessage(messageId, updatedComments);
+      const ok2 = saveUserVotes(messageId, updatedVotes);
+      if (!ok1 || !ok2) throw new Error("quota");
       return { comments: updatedComments, votes: updatedVotes };
     },
     onMutate: async ({ commentId, vote }) => {
@@ -87,7 +83,7 @@ export function CommentList({ messageId }: CommentListProps) {
       const next = vote; // already computed by caller
 
       // optimistic updates
-      const optimisticComments = applyVote(previousComments || [], commentId, currentVote, next);
+      const optimisticComments = applyVoteToList(previousComments || [], commentId, currentVote, next);
       const optimisticVotes: Record<string, UserVote> = { ...(previousVotes || {}) };
       if (next === null) {
         delete optimisticVotes[commentId];
@@ -110,11 +106,14 @@ export function CommentList({ messageId }: CommentListProps) {
       if (context?.previousVotes) {
         queryClient.setQueryData(["userVotes", messageId], context.previousVotes);
       }
+      toast.error("Couldn't register vote. Restored previous state.");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["comments", messageId] });
       queryClient.invalidateQueries({ queryKey: ["userVotes", messageId] });
     },
+    retry: 2,
+    retryDelay: (attempt) => Math.min(1000 * attempt, 3000),
   });
 
   // Update comment mutation
@@ -132,7 +131,8 @@ export function CommentList({ messageId }: CommentListProps) {
           ? { ...c, content: data.content, author: data.author }
           : c
       );
-      saveCommentsForMessage(messageId, updatedComments);
+      const ok = saveCommentsForMessage(messageId, updatedComments);
+      if (!ok) throw new Error("quota");
       return updatedComments;
     },
     onMutate: async ({ commentId, data }) => {
@@ -155,31 +155,34 @@ export function CommentList({ messageId }: CommentListProps) {
       if (context?.previous) {
         queryClient.setQueryData(["comments", messageId], context.previous);
       }
+      toast.error("Couldn't update comment. Restored previous state.");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["comments", messageId] });
     },
+    retry: 2,
+    retryDelay: (attempt) => Math.min(1000 * attempt, 3000),
   });
 
-  // Delete comment mutation
+  // Delete comment mutation (tombstone): keep node so children remain
   const deleteMutation = useMutation({
     mutationFn: async (commentId: string) => {
       const currentComments = getCommentsForMessage(messageId);
-      const updatedComments = currentComments.filter((c) => c.id !== commentId);
-      saveCommentsForMessage(messageId, updatedComments);
+      const updatedComments = currentComments.map((c) =>
+        c.id === commentId ? { ...c, content: "{DELETED COMMENT}" } : c
+      );
+      const ok = saveCommentsForMessage(messageId, updatedComments);
+      if (!ok) throw new Error("quota");
       return updatedComments;
     },
     onMutate: async (commentId) => {
       await queryClient.cancelQueries({ queryKey: ["comments", messageId] });
 
-      const previous = queryClient.getQueryData<Comment[]>([
-        "comments",
-        messageId,
-      ]);
+      const previous = queryClient.getQueryData<Comment[]>(["comments", messageId]);
 
-      // Optimistically remove
-      const optimisticComments = (previous || []).filter(
-        (c) => c.id !== commentId
+      // Optimistically tombstone instead of removing
+      const optimisticComments = (previous || []).map((c) =>
+        c.id === commentId ? { ...c, content: "{DELETED COMMENT}" } : c
       );
       queryClient.setQueryData<Comment[]>(["comments", messageId], optimisticComments);
 
@@ -189,50 +192,115 @@ export function CommentList({ messageId }: CommentListProps) {
       if (context?.previous) {
         queryClient.setQueryData(["comments", messageId], context.previous);
       }
+      toast.error("Couldn't delete comment. Restored previous state.");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["comments", messageId] });
+      toast.success("Comment deleted.");
     },
+    retry: 2,
+    retryDelay: (attempt) => Math.min(1000 * attempt, 3000),
   });
 
-  // Sort comments: newest first
-  const sortedComments = [...comments].sort(
-    (a, b) => b.timestamp - a.timestamp
-  );
+  // Create reply mutation (like create, but sets parentId)
+  const createReplyMutation = useMutation({
+    mutationFn: async ({
+      parentId,
+      content,
+      author,
+    }: {
+      parentId: string;
+      content: string;
+      author: string;
+    }) => {
+      const current = getCommentsForMessage(messageId);
+      const newComment: Comment = {
+        id: crypto.randomUUID(),
+        content,
+        author,
+        timestamp: Date.now(),
+        parentId,
+        upvotes: 0,
+        downvotes: 0,
+      };
+      const updated = [...current, newComment];
+      const ok = saveCommentsForMessage(messageId, updated);
+      if (!ok) throw new Error("quota");
+      return updated;
+    },
+    onMutate: async (variables) => {
+      await queryClient.cancelQueries({ queryKey: ["comments", messageId] });
+      const previous = queryClient.getQueryData<Comment[]>(["comments", messageId]);
+      const optimistic: Comment = {
+        id: `temp-${Date.now()}`,
+        content: variables.content,
+        author: variables.author,
+        timestamp: Date.now(),
+        parentId: variables.parentId,
+        upvotes: 0,
+        downvotes: 0,
+      };
+      queryClient.setQueryData<Comment[]>(
+        ["comments", messageId],
+        [...(previous || []), optimistic]
+      );
+      return { previous };
+    },
+    onError: (err, vars, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(["comments", messageId], context.previous);
+      }
+      toast.error("Couldn't post reply. Restored previous state.");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["comments", messageId] });
+      toast.success("Reply posted.");
+    },
+    retry: 2,
+    retryDelay: (attempt) => Math.min(1000 * attempt, 3000),
+  });
+
+  // Apply sorting
+  const sortedComments = useMemo(() => {
+    return sortComments(comments, sort);
+  }, [comments, sort]);
+
+  // Build tree (2 levels)
+  const tree = useMemo<CommentNode[]>(() => buildCommentTree(sortedComments, sort), [sortedComments, sort]);
 
   const isLoading =
     updateMutation.isPending ||
     deleteMutation.isPending;
 
+  const isInitialLoading = isFetchingComments || isFetchingVotes;
+
   return (
     <>
-      {sortedComments.length === 0 ? (
-        <div className="py-8 text-center text-slate-500 dark:text-slate-400">
-          <p className="text-sm">No comments yet.</p>
-          <p className="text-xs mt-1">Be the first to share your thoughts!</p>
-        </div>
+      {/* Sort Controls */}
+      <div className="mb-2 flex items-center justify-between">
+        <SortControls value={sort} onChange={setSort} />
+      </div>
+      {isInitialLoading ? (
+        <CommentsSkeleton />
+      ) : sortedComments.length === 0 ? (
+        <EmptyComments />
       ) : (
-        <div className="space-y-1">
-          {sortedComments.map((comment) => (
-            <div key={comment.id} className="border-b border-slate-200/50 dark:border-slate-800/50 last:border-b-0">
-              <CommentItem
-                comment={comment}
-                messageId={messageId}
-                onEdit={(commentId, data) =>
-                  updateMutation.mutate({ commentId, data })
-                }
-                onDelete={(commentId) => deleteMutation.mutate(commentId)}
-                onVote={(commentId: string, target: UserVote | null) => {
-                  const current = (userVotes?.[commentId] as UserVote | undefined) ?? null;
-                  const next = nextVote(current, (target || "up") as UserVote);
-                  voteMutation.mutate({ commentId, vote: next });
-                }}
-                userVote={(userVotes?.[comment.id] as UserVote | undefined) ?? null}
-                isLoading={isLoading}
-              />
-            </div>
-          ))}
-        </div>
+        <CommentThread
+          messageId={messageId}
+          nodes={tree}
+          userVotes={userVotes}
+          onEdit={(commentId, data) => updateMutation.mutate({ commentId, data })}
+          onDelete={(commentId) => deleteMutation.mutate(commentId)}
+          onVote={(commentId, target) => {
+            const current = (userVotes?.[commentId] as UserVote | undefined) ?? null;
+            const next = computeNextVote(current, (target || "up") as UserVote);
+            voteMutation.mutate({ commentId, vote: next });
+          }}
+          onReply={(parentId, content, author) => {
+            createReplyMutation.mutate({ parentId, content, author });
+          }}
+          maxDepth={6}
+        />
       )}
     </>
   );

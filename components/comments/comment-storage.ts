@@ -39,9 +39,14 @@ function read<T>(key: string, fallback: T): T {
   return safeParse<T>(window.localStorage.getItem(key), fallback);
 }
 
-function write<T>(key: string, value: T): void {
-  if (!isBrowser()) return; // no-op on server
-  window.localStorage.setItem(key, JSON.stringify(value));
+function write<T>(key: string, value: T): boolean {
+  if (!isBrowser()) return true; // no-op on server treated as success
+  try {
+    window.localStorage.setItem(key, JSON.stringify(value));
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 const commentsKey = (key: string) => `comments:${key}`;
@@ -63,8 +68,8 @@ export function getCommentsForMessage(stableKey: string): Comment[] {
 export function saveCommentsForMessage(
   stableKey: string,
   comments: Comment[]
-): void {
-  write<Comment[]>(commentsKey(stableKey), comments);
+): boolean {
+  return write<Comment[]>(commentsKey(stableKey), comments);
 }
 
 /**
@@ -83,7 +88,7 @@ export function getUserVotes(stableKey: string): Record<string, UserVote> {
 export function saveUserVotes(
   stableKey: string,
   votes: Record<string, UserVote>
-): void {
-  write<Record<string, UserVote>>(votesKey(stableKey), votes);
+): boolean {
+  return write<Record<string, UserVote>>(votesKey(stableKey), votes);
 }
 
