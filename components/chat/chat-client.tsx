@@ -83,14 +83,17 @@ export default function ChatClient({ initialQuestions }: { initialQuestions: QA[
     // Show search results when user is typing (always, even after first message)
     const shouldShowSearchResults = panelInputValue.trim().length > 0;
 
-    const sendMessage = useCallback((rawContent: string) => {
+    const sendMessage = useCallback(async (rawContent: string) => {
         const trimmed = rawContent.trim();
         if (!trimmed) return;
 
         const userMessage: Message = { id: createId(), role: "user", content: trimmed };
+        setMessages((prev) => [...prev, userMessage]);
+        setIsResponding(true);
 
-        // Look up a predefined answer if exact match; fallback to a generic response
+        // Look up a predefined answer if exact match
         const matched = qaIndex.get(trimmed.toLowerCase());
+
         // Try to resolve Pokémon by name (freeform queries like "pikachu" or "show me charizard")
         let byNameAnswer: string | undefined;
         if (!matched) {
@@ -111,13 +114,32 @@ export default function ChatClient({ initialQuestions }: { initialQuestions: QA[
             }
         }
 
+        // If no exact or name-based match, request closest match from server for THIS input
+        let closestSearchAnswer: string | undefined;
+        if (!matched && !byNameAnswer) {
+            try {
+                const response = await fetch(`/api/search?q=${encodeURIComponent(trimmed)}`);
+                if (response.ok) {
+                    const data = (await response.json()) as { results?: string[] };
+                    const topQuestion = data?.results?.[0]?.toLowerCase();
+                    if (topQuestion) {
+                        const fromIndex = qaIndex.get(topQuestion);
+                        if (fromIndex?.answer) {
+                            closestSearchAnswer = fromIndex.answer;
+                        }
+                    }
+                }
+            } catch {
+                // ignore search errors and fall back to no-info message
+            }
+        }
+
         const assistantContent = matched?.answer
             ?? byNameAnswer
-            ?? `# Response\n\n${trimmed}\n\n---\n\n- Length: **${trimmed.length}** characters`;
+            ?? closestSearchAnswer
+            ?? `Pokidex AI doesn't have any information available on "${trimmed}"`;
 
-        setMessages((prev) => [...prev, userMessage]);
-        setIsResponding(true);
-
+        // Simulate small delay for UX parity
         window.setTimeout(() => {
             setMessages((prev) => [
                 ...prev,

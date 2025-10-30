@@ -4,8 +4,8 @@ import {
     type FormEvent,
     type KeyboardEvent,
     type RefObject,
+    useRef,
 } from "react";
-
 import {
     InputGroup,
     InputGroupAddon,
@@ -65,6 +65,31 @@ const PromptSection = ({
     const isDocked = placement === "docked";
     // When docked (has messages), show results on top; when floating (no messages), show below
     const searchResultsPlacement = hasMessages ? "top" : "bottom";
+    const formRef = useRef<HTMLFormElement | null>(null);
+
+    const handleSuggestionSelect = (selected: string) => {
+        // Update input immediately so submit reads latest value
+        onChange(selected);
+        onSuggestionClick?.(selected);
+        if (!isResponding) {
+            // Defer to next tick to allow parent state to update
+            setTimeout(() => {
+                formRef.current?.requestSubmit();
+            }, 0);
+        }
+    };
+
+    const handleSearchResultClick = (selected: string) => {
+        // Update input immediately so submit reads latest value
+        onChange(selected);
+        onSearchResultClick?.(selected);
+        if (!isResponding) {
+            // Defer to next tick to allow parent state to update
+            setTimeout(() => {
+                formRef.current?.requestSubmit();
+            }, 0);
+        }
+    };
 
     return (
         <motion.div
@@ -78,7 +103,7 @@ const PromptSection = ({
                     : "absolute left-1/2 top-[40%] -translate-x-1/2 -translate-y-1/2 sm:top-[55%] md:top-[51%] lg:top-[50%] px-2"
             )}
         >
-            <form onSubmit={onSubmit} className="relative">
+            <form ref={formRef} onSubmit={onSubmit} className="relative">
                 {!hasMessages && (
                     <>
                         {/* Welcome text and description above suggestions */}
@@ -102,7 +127,7 @@ const PromptSection = ({
                             <div className="mb-3">
                                 <Suggestions>
                                     {suggestions.map((q) => (
-                                        <Suggestion key={q} suggestion={q} onClick={(s) => onSuggestionClick?.(s)} />
+                                        <Suggestion key={q} suggestion={q} onClick={handleSuggestionSelect} />
                                     ))}
                                 </Suggestions>
                             </div>
@@ -146,7 +171,7 @@ const PromptSection = ({
                 <SearchResults
                     results={searchResults.map(q => ({ question: q }))}
                     isVisible={showSearchResults}
-                    onResultClick={onSearchResultClick || (() => { })}
+                    onResultClick={handleSearchResultClick}
                     placement={searchResultsPlacement}
                     query={value}
                     selectedIndex={selectedSearchIndex}

@@ -17,9 +17,9 @@ export const Suggestions = ({
 }: SuggestionsProps) => (
   <div className="relative w-full">
     {/* Left fade */}
-    <div className="pointer-events-none absolute left-0 top-0 z-10 h-full w-8 bg-gradient-to-r from-white to-transparent" />
+    <div className="pointer-events-none absolute left-0 top-0 z-10 h-full w-8 bg-gradient-to-r from-[#f8fafc] to-transparent" />
     {/* Right fade */}
-    <div className="pointer-events-none absolute right-0 top-0 z-10 h-full w-8 bg-gradient-to-l from-white to-transparent" />
+    <div className="pointer-events-none absolute right-0 top-0 z-10 h-full w-8 bg-gradient-to-l from-[#f8fafc] to-transparent" />
     <ScrollArea className="w-full overflow-x-auto whitespace-nowrap" {...props}>
       <div className={cn("flex w-max flex-nowrap items-center gap-2 pl-2", className)}>
         {children}

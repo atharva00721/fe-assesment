@@ -108,7 +108,7 @@ export default function CommentsPanel() {
 
   return (
     <Sheet>
-      <SheetTrigger className="inline-flex items-center gap-2 rounded-md border border-slate-200 bg-white/90 p-2 text-sm shadow-sm hover:bg-white dark:border-slate-800 dark:bg-slate-900/90">
+      <SheetTrigger className="inline-flex items-center gap-2 rounded-md border border-slate-200 bg-white/90 p-2 text-sm hover:bg-white dark:border-slate-800 dark:bg-slate-900/90">
         <MessageSquareText className="size-4" />
       </SheetTrigger>
       <SheetContent side="right" className="w-[95vw] sm:max-w-xl flex flex-col p-0">
