@@ -147,4 +147,49 @@ export async function fetchServerQuestionTitles(limit = 1300): Promise<Array<{ q
   return results;
 }
 
+const sharedFetchOptions: RequestInit | undefined =
+  typeof fetch === "function"
+    ? { cache: "force-cache", next: { revalidate: 3600 } as { revalidate: number } }
+    : undefined;
+
+export async function fetchServerQuestionById(idOrName: string): Promise<QA | null> {
+  const lookup = idOrName?.toString().trim().toLowerCase();
+  if (!lookup) {
+    return null;
+  }
+
+  try {
+    const detailResponse = await fetch(
+      `https://pokeapi.co/api/v2/pokemon/${encodeURIComponent(lookup)}`,
+      sharedFetchOptions
+    );
+
+    if (!detailResponse.ok) {
+      return null;
+    }
+
+    const detail = (await detailResponse.json()) as PokemonDetail;
+
+    const species = detail?.species?.url
+      ? await fetch(detail.species.url, sharedFetchOptions)
+          .then(async (res) => (res.ok ? ((await res.json()) as PokemonSpecies) : null))
+          .catch(() => null)
+      : null;
+
+    const chain = species?.evolution_chain?.url
+      ? await fetch(species.evolution_chain.url, sharedFetchOptions)
+          .then(async (res) => (res.ok ? ((await res.json()) as EvolutionChain) : null))
+          .catch(() => null)
+      : null;
+
+    const evolutionPath = getFirstEvolutionPath(chain);
+    const evolutionMarkup = renderEvolutionRow(evolutionPath);
+
+    return { id: String(detail.id), ...formatDetailedQA(detail, species ?? undefined, evolutionMarkup) };
+  } catch (error) {
+    console.error("Failed to fetch Pokémon question by id", error);
+    return null;
+  }
+}
+
 

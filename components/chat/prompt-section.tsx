@@ -19,6 +19,7 @@ import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import SearchResults from "./search-results";
 import { Suggestions, Suggestion } from "@/components/ai-elements/suggestion";
+import { Kbd, KbdGroup } from "../ui/kbd";
 
 type PromptSectionProps = {
     value: string;
@@ -71,21 +72,42 @@ const PromptSection = ({
             initial={false}
             transition={{ type: "spring", stiffness: 260, damping: 26 }}
             className={cn(
-                "w-full max-w-3xl transform z-30",
+                "w-full max-w-lg sm:max-w-xl md:max-w-2xl lg:max-w-3xl z-30 transform",
                 isDocked
-                    ? "absolute bottom-10 left-1/2 -translate-x-1/2"
-                    : "absolute left-1/2 top-[55%] -translate-x-1/2 -translate-y-1/2 sm:top-[53%] md:top-[51%]"
+                    ? "absolute bottom-3 left-1/2 -translate-x-1/2 px-2"
+                    : "absolute left-1/2 top-[40%] -translate-x-1/2 -translate-y-1/2 sm:top-[55%] md:top-[51%] lg:top-[50%] px-2"
             )}
         >
             <form onSubmit={onSubmit} className="relative">
-                {!hasMessages && suggestions.length > 0 && (
-                    <div className="mb-3">
-                        <Suggestions>
-                            {suggestions.map((q) => (
-                                <Suggestion key={q} suggestion={q} onClick={(s) => onSuggestionClick?.(s)} />
-                            ))}
-                        </Suggestions>
-                    </div>
+                {!hasMessages && (
+                    <>
+                        {/* Welcome text and description above suggestions */}
+                        <div className="mb-10 text-center">
+                            <h1 className="bg-linear-to-r from-slate-900 via-slate-800 to-slate-900 bg-clip-text text-3xl font-bold tracking-tight text-transparent dark:from-white dark:via-slate-200 dark:to-white sm:text-4xl">
+                                PokéDex AI
+                            </h1>
+                            <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
+                                Ask about any Pokémon — stats, evolutions, types, moves and more.
+                            </p>
+                            <p className="mt-3 text-xs text-muted-foreground">Press
+                                {" "}<span>
+                                    <KbdGroup>
+                                        <Kbd className="bg-accent text-accent-foreground">Ctrl</Kbd>
+                                        <span>+</span>
+                                        <Kbd>/</Kbd>
+                                    </KbdGroup>
+                                </span>{" "} for shortcuts</p>
+                        </div>
+                        {suggestions.length > 0 && (
+                            <div className="mb-3">
+                                <Suggestions>
+                                    {suggestions.map((q) => (
+                                        <Suggestion key={q} suggestion={q} onClick={(s) => onSuggestionClick?.(s)} />
+                                    ))}
+                                </Suggestions>
+                            </div>
+                        )}
+                    </>
                 )}
                 <InputGroup className="bg-background">
                     <InputGroupTextarea
