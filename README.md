@@ -68,9 +68,6 @@ None required for local development. External data is fetched from PokéAPI.
 - This is an assessment project; APIs under `app/api/comments` are intentionally not persistent.
 - If PokéAPI rate limits, wait and retry; data fetching is cached with `force-cache` and `revalidate` hints.
 
-### License
-MIT
-
 ### How this meets the Technical Assignment
 - **Next.js architecture (App Router)**: Uses server components for initial data (`app/chat/page.tsx`) and client components for interactive chat, search, and comments (`components/chat/*`, `components/comments/*`).
 - **SSR/CSR hybrid**: Preloads 1300+ Pokémon Q&A on the server via `fetchServerQuestions` and hydrates the chat on the client; comments and search interactions run client-side.
