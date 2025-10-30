@@ -1,5 +1,5 @@
 import { fetchServerQuestions } from "@/lib/questions";
-import ChatClient from "./_components/chat-client";
+import ChatClient from "@/components/chat/chat-client";
 
 export default async function ChatPage() {
   // Server-side data fetch (SSR static with revalidate)

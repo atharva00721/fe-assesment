@@ -18,10 +18,10 @@ import {
   applyVote as applyVoteToList,
   sortComments,
   buildCommentTree,
-} from "./utils";
+} from "@/lib/comments/utils";
 import { CommentsSkeleton } from "./skeleton-list";
 import { EmptyComments } from "./empty-state";
-import { usePersistedSort } from "./hooks";
+import { usePersistedSort } from "@/hooks/comments";
 
 type CommentListProps = {
   messageId: string;

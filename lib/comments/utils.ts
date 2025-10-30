@@ -1,4 +1,4 @@
-import type { Comment, UserVote } from "./types";
+import type { Comment, UserVote } from "@/components/comments/types";
 
 export function nextVote(current: UserVote | null, target: UserVote): UserVote | null {
     if (current === target) return null;

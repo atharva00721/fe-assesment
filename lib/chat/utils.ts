@@ -1,4 +1,4 @@
-import type { QA } from "@/lib/questions";
+import type { QA } from "@/lib/questions/schema";
 
 export const createId = () =>
   typeof crypto !== "undefined" && "randomUUID" in crypto

@@ -17,8 +17,8 @@ import dynamic from "next/dynamic";
 import { ActiveTurnProvider } from "./active-turn-context";
 import type { Message } from "./types";
 import type { QA } from "@/lib/questions/schema";
-import { createId, buildNameIndex } from "./utils";
-import { useGlobalShortcuts, useQAIndex, useSuggestions } from "./hooks";
+import { createId, buildNameIndex } from "@/lib/chat/utils";
+import { useGlobalShortcuts, useQAIndex, useSuggestions } from "@/hooks/chat";
 
 const KeyboardShortcutsDialog = dynamic(() => import("./keyboard-shortcuts-dialog"), {
     loading: () => null,

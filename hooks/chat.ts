@@ -17,7 +17,7 @@ export function useQAIndex(initialQuestions: QA[]) {
 
 export function useGlobalShortcuts(
   shouldShowSearchResults: boolean,
-  textareaRef: React.RefObject<HTMLTextAreaElement>,
+  textareaRef: React.RefObject<HTMLTextAreaElement | null>,
   setPanelInputValue: (v: string) => void
 ) {
   useEffect(() => {
