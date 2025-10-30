@@ -70,3 +70,17 @@ None required for local development. External data is fetched from PokéAPI.
 
 ### License
 MIT
+
+### How this meets the Technical Assignment
+- **Next.js architecture (App Router)**: Uses server components for initial data (`app/chat/page.tsx`) and client components for interactive chat, search, and comments (`components/chat/*`, `components/comments/*`).
+- **SSR/CSR hybrid**: Preloads 1300+ Pokémon Q&A on the server via `fetchServerQuestions` and hydrates the chat on the client; comments and search interactions run client-side.
+- **Edge search API**: `app/api/search/route.ts` runs on the Edge, provides fuzzy, cached suggestions; keyboard navigation supported (arrows/Enter/Escape with live SR text in `prompt-section.tsx`).
+- **TanStack Query caching**: Configured in `app/providers.tsx` with long `staleTime` and disabled refocus refetch; used across interactive pieces.
+- **Autocomplete UX**: Search results list, selection with Enter/click submits automatically; suggestions render above the prompt on the home state.
+- **Nested comments**: Multi-level threads, add/edit/delete, vote buttons, client persistence in `localStorage` (`components/comments/*`). Sorting by newest/oldest/most voted supported.
+- **Chat interface**: Clean prompt, floating vs docked placement, message rendering and server responses via `components/ai-elements/*` and chat components.
+- **Accessibility and keyboard**: ARIA labels, SR-only descriptions for results, `Kbd` hints, and clear focusable controls.
+- **Performance**: Single batched server fetch for initial data, cached title queries, React Query caching, and Edge runtime for low-latency search.
+
+Notes
+- If PokéAPI rate limits, retry later; responses are cached where possible.
